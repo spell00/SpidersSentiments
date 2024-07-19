@@ -1,0 +1,7 @@
+spacy
+nltk
+emoji
+transformers
+pandas
+bs4
+unidecode
