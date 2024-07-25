@@ -142,8 +142,13 @@ if __name__ == "__main__":
 
         # Make a dataframe of only sensationalist news
         var_news = df[df[var] == 1]
-        pos_var = var_news.loc[:, 'POS']
-        neg_var = var_news.loc[:, 'NEG']
+        if np.isnan(var_news.loc[:, 'POS'].iloc[0]):
+
+            pos_var = var_news.loc[:, 'POS.1']
+            neg_var = var_news.loc[:, 'NEG.1']
+        else:
+            pos_var = var_news.loc[:, 'POS']
+            neg_var = var_news.loc[:, 'NEG']
         pval = ttest_ind(pos_var, neg_var).pvalue
 
         # Make a boxplot pos and neg scores
