@@ -11,9 +11,9 @@ from scipy import stats
 # - Top species and genus per feeling (4 rows)
 # - Top species and genus per Sensationalism (4 rows)
 
-# Boxplots of sensationalism per Contributor, per Source, per Language, per Country, 
+# Boxplots of sensationalism per Contributor, per Source, per Language, per Country,
 # per Continent, per Category, per Subcategory, per Topic, per Subtopic, per Positive, per Negative
-# Boxplots of Negatives per Contributor, per Source, per Language, per Country, 
+# Boxplots of Negatives per Contributor, per Source, per Language, per Country,
 # per Continent, per Category, per Subcategory, per Topic, per Subtopic, per Positive, per Negative
 
 if __name__ == "__main__":
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     classif = args.classif
     use_preprocess = args.use_preprocess
-    
+
     df = pd.read_csv(
         f"resultats/preprocess{use_preprocess}/resultats_sentiments_{classif}.csv", sep=','
     )
@@ -59,20 +59,20 @@ if __name__ == "__main__":
     positive_news = np.array([1 if x is True else 0 for x in pos-neg > 0.1])
     print('\t\tPercentage of positive news:', positive_news.sum() / len(positive_news))
     print('\t\tPercentage of negative news:', negative_news.sum() / len(negative_news))
-    
+
     print('\tPositive and negative defined as a news with a positive rate greater than 0.2 and vice-versa')
 
     # define a positive news as a news with a positive rate greater than 0.2
     # more than a negative news
     negative_news = np.array([1 if x is True else 0 for x in neg > 0.2])
     positive_news = np.array([1 if x is True else 0 for x in pos > 0.2])
-    print('\t\tPercentage of positive news:', 
+    print('\t\tPercentage of positive news:',
           positive_news.sum() / len(positive_news)
     )
-    print('\t\tPercentage of negative news:', 
+    print('\t\tPercentage of negative news:',
           negative_news.sum() / len(negative_news)
     )
-    
+
     # Make a boxplot pos and neg scores
     plt.boxplot([pos, neg])
     plt.xticks([1, 2], ['Positive', 'Negative'])
@@ -95,10 +95,10 @@ if __name__ == "__main__":
         print(f'Variable: {var}')
         var_vals = df.loc[:, var]
 
-        print('\t\tPositive correleation:', 
+        print('\t\tPositive correleation:',
               var_vals.corr(pos, method=stats.pointbiserialr)
         )
-        print('\t\tNegative correleation:', 
+        print('\t\tNegative correleation:',
               var_vals.corr(neg, method=stats.pointbiserialr)
         )
 
@@ -113,21 +113,21 @@ if __name__ == "__main__":
         df['Positive'] = positive_news
 
         # find correlation between sensationalism and positive and negative news
-        print('\t\tPositive News correleation:', 
+        print('\t\tPositive News correleation:',
               var_vals.corr(df.loc[:, 'Positive'], method=stats.pointbiserialr)
         )
-        print('\t\tNegative News correleation:', 
+        print('\t\tNegative News correleation:',
               var_vals.corr(df.loc[:, 'Negative'], method=stats.pointbiserialr)
         )
 
         print('\tPositive and negative defined as a news with a positive',
               ' rate greater than 0.2 and vice-versa')
 
-        # define a positive news as a news with a positive rate greater than 0.2 
+        # define a positive news as a news with a positive rate greater than 0.2
         # more than a negative news
         negative_news = np.array([1 if x is True else 0 for x in neg > 0.2])
         positive_news = np.array([1 if x is True else 0 for x in pos > 0.2])
-        
+
         df['Negative'] = negative_news
         df['Positive'] = positive_news
 
@@ -135,8 +135,8 @@ if __name__ == "__main__":
         print('\t\tPositive News correleation:',
               var_vals.corr(df.loc[:, 'Positive'], method=stats.pointbiserialr)
         )
-        
-        print('\t\tNegative News correleation:', 
+
+        print('\t\tNegative News correleation:',
               var_vals.corr(df.loc[:, 'Negative'], method=stats.pointbiserialr)
         )
 

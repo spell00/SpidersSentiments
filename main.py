@@ -40,7 +40,7 @@ driver = webdriver.Firefox(options=options)
 #     texte = soup.get_text()
 # except (NoSuchElementException, WebDriverException) as e:
 #     print(f"Erreur lors de la récupération de l'URL {url}: {e}")
-# 
+#
 # page = driver.page_source
 # soup = bs(page, 'html.parser')
 # texte = soup.get_text()
@@ -134,7 +134,7 @@ class VaderClassifier:
             return 'NEGATIVE', scores['compound']
         else:
             return 'NEUTRAL', scores['compound']
-        
+
 
 def get_classifier(classif):
     if classif == 'flair':
@@ -158,7 +158,7 @@ def get_symspell(eng_words):
         begin = now()
         ss = SymSpell(max_edit_distance=2)
         _ = ss.create_dictionary_from_arr(eng_words, token_pattern=r'.+')
-        filehandler = open('symspell.pkl', 'wb') 
+        filehandler = open('symspell.pkl', 'wb')
         pickle.dump(ss, filehandler)
         print('Finished dictionary for symspell in', format_delta(begin, now()))
     return ss
@@ -173,7 +173,7 @@ def get_eng_words(file='data/english_words_479k.txt'):
 def main(chemin_csv, classif, use_preprocess):
 
     n_found = 0
-    classifier = get_classifier(classif)    
+    classifier = get_classifier(classif)
     data_frame = charger_csv(chemin_csv)
     new_df = []
 
@@ -191,7 +191,7 @@ def main(chemin_csv, classif, use_preprocess):
         stop_words = None
         words_dict = None
         ss = None
-        
+
     for index, ligne in tqdm(data_frame.iterrows(), total=len(data_frame), desc="Analyse des sentiments"):
         url = ligne['URL']
         lang = ligne['Language']
@@ -200,7 +200,7 @@ def main(chemin_csv, classif, use_preprocess):
         else:
             n_found += 1
             print('found.', lang, n_found)
-        
+
         texte = obtenir_texte_better_but_slow(url)
         texte = preprocess(texte, stop_words, ss, words_dict)
         positives = []
@@ -214,24 +214,27 @@ def main(chemin_csv, classif, use_preprocess):
             except:
                 print("Problem with sentence. Probabiliy contains words too long > 128")
                 continue
-            
+
             if value in ['POSITIVE', 'positive']:
                 positives.append(sent)
             elif value in ['NEGATIVE', 'negative']:
                 negatives.append(sent)
+            else:
+                neutrals.append(sent)
 
         if len(sentences) == 0:
             continue
         else:
             pos_rate = len(positives) / len(sentences)
             neg_rate = len(negatives) / len(sentences)
-            rates = [pos_rate, neg_rate]
-        
+            neu_rate = len(neutrals) / len(sentences)
+            rates = [pos_rate, neg_rate, neu_rate]
+
         new_df.append(np.concatenate([ligne.values, rates]))
 
     # Enregistrer le résultat dans un nouveau CSV
     new_df = pd.DataFrame(np.stack(new_df))
-    new_df.columns = data_frame.columns.tolist() + ['POS', 'NEG']
+    new_df.columns = data_frame.columns.tolist() + ['POS', 'NEG', 'NEU']
     os.makedirs(f'resultats/preprocess{use_preprocess}/', exist_ok=True)
     new_df.to_csv(
         f'resultats/preprocess{use_preprocess}/resultats_sentiments_{classif}.csv',
@@ -243,7 +246,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chemin_csv", type=str, default="data/Data_spider_news_global.csv")
     parser.add_argument("--classif", type=str, default='huggingface_roberta')
-    parser.add_argument("--use_preprocess", type=int, default=1)
+    parser.add_argument("--use_preprocess", type=int, default=0)
     args = parser.parse_args()
 
     main(
