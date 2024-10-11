@@ -103,6 +103,13 @@ class FlairClassifier:
     def predict(self, texte):
         sentence = Sentence(texte)
         self.classifier.predict(sentence)
+        score = sentence.labels[0].score
+        value = sentence.labels[0].value
+        if score >= 0.8:
+            return value, score
+        else:
+            return 'NEUTRAL', score
+
         return sentence.labels[0].value, sentence.labels[0].score
 
 class HuggingFaceClassifier:

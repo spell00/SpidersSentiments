@@ -5,3 +5,8 @@ transformers
 pandas
 bs4
 unidecode
+flair
+vaderSentiment
+scikit-learn
+selenium
+beautifulsoup4

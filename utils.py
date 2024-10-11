@@ -86,6 +86,7 @@ digits = "([0-9])"
 multiple_dots = r'\.{2,}'
 
 def split_into_sentences(text: str) -> list[str]:
+
     """
     Split the text into sentences.
 
@@ -124,3 +125,4 @@ def split_into_sentences(text: str) -> list[str]:
     sentences = [s.strip() for s in sentences]
     if sentences and not sentences[-1]: sentences = sentences[:-1]
     return sentences
+

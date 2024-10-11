@@ -31,8 +31,9 @@ if __name__ == "__main__":
     )
     os.makedirs(f'figures/{classif}/preprocess{use_preprocess}', exist_ok=True)
     # find correlation between sensationalism and positive and negative rates
-    pos = df.iloc[:, -2]
-    neg = df.iloc[:, -1]
+    pos = df.iloc[:, -3]
+    neg = df.iloc[:, -2]
+    neu = df.iloc[:, -1]
     pval = ttest_ind(pos, neg).pvalue
 
     # plot frequency of positive and negative news
@@ -55,10 +56,12 @@ if __name__ == "__main__":
 
     # define a positive news as a news with a positive rate greater than 0.2
     # more than a negative news
+    neutral_news = np.array([1 if n < 0.1 and p < 0.1 is True else 0 for n, p in zip(neg, pos)])
     negative_news = np.array([1 if x is True else 0 for x in neg-pos > 0.1])
     positive_news = np.array([1 if x is True else 0 for x in pos-neg > 0.1])
     print('\t\tPercentage of positive news:', positive_news.sum() / len(positive_news))
     print('\t\tPercentage of negative news:', negative_news.sum() / len(negative_news))
+    print('\t\tPercentage of neutral news:', neutral_news.sum() / len(neutral_news))
 
     print('\tPositive and negative defined as a news with a positive rate greater than 0.2 and vice-versa')
 
@@ -66,17 +69,21 @@ if __name__ == "__main__":
     # more than a negative news
     negative_news = np.array([1 if x is True else 0 for x in neg > 0.2])
     positive_news = np.array([1 if x is True else 0 for x in pos > 0.2])
+    neutral_news = np.array([1 if n < 0.2 and p < 0.2 is True else 0 for n, p in zip(neg, pos)])
     print('\t\tPercentage of positive news:',
           positive_news.sum() / len(positive_news)
     )
     print('\t\tPercentage of negative news:',
           negative_news.sum() / len(negative_news)
     )
+    print('\t\tPercentage of neutral news:',
+          neutral_news.sum() / len(neutral_news)
+    )
 
     # Make a boxplot pos and neg scores
-    plt.boxplot([pos, neg])
-    plt.xticks([1, 2], ['Positive', 'Negative'])
-    plt.savefig(f'figures/{classif}/preprocess{use_preprocess}/pos_neg_scores.png')
+    plt.boxplot([pos, neg, neu])
+    plt.xticks([1, 2, 3], ['Positive', 'Negative', 'Neutral'])
+    plt.savefig(f'figures/{classif}/preprocess{use_preprocess}/pos_neg_neu_scores.png')
     plt.close()
 
     colnames = ['Sensationalism', 'Bite','Death','Figure_species',
@@ -86,10 +93,12 @@ if __name__ == "__main__":
     ]
     pos_corr = df.loc[:, colnames].corrwith(pos, method=stats.pointbiserialr)
     neg_corr = df.loc[:, colnames].corrwith(neg, method=stats.pointbiserialr)
+    neutral_corr = df.loc[:, colnames].corrwith(neu, method=stats.pointbiserialr)
     pos_corr.index = ['Correlation with positive', 'p-value with positive']
     neg_corr.index = ['Correlation with negative', 'p-value with negative']
+    neutral_corr.index = ['Correlation with neutral', 'p-value with neutral']
     # concat both df
-    corr = pd.concat([pos_corr, neg_corr], axis=0)
+    corr = pd.concat([pos_corr, neg_corr, neutral_corr], axis=0)
     corr.to_csv(f'figures/{classif}/preprocess{use_preprocess}/correlations.csv')
     for var in colnames:
         print(f'Variable: {var}')
@@ -101,6 +110,9 @@ if __name__ == "__main__":
         print('\t\tNegative correleation:',
               var_vals.corr(neg, method=stats.pointbiserialr)
         )
+        print('\t\tNeutral correleation:',
+              var_vals.corr(neu, method=stats.pointbiserialr)
+        )
 
         print('\tPositive and negative defined as a news with a positive rate',
               'greater than 0.1 more than a negative news and vice-versa')
@@ -109,8 +121,10 @@ if __name__ == "__main__":
         # more than a negative news
         negative_news = np.array([1 if x is True else 0 for x in neg-pos > 0.1])
         positive_news = np.array([1 if x is True else 0 for x in pos-neg > 0.1])
+        neutral_news = np.array([1 if n < 0.1 and p < 0.1 is True else 0 for n, p in zip(neg, pos)])
         df['Negative'] = negative_news
         df['Positive'] = positive_news
+        df['Neutral'] = neutral_news
 
         # find correlation between sensationalism and positive and negative news
         print('\t\tPositive News correleation:',
@@ -118,6 +132,9 @@ if __name__ == "__main__":
         )
         print('\t\tNegative News correleation:',
               var_vals.corr(df.loc[:, 'Negative'], method=stats.pointbiserialr)
+        )
+        print('\t\tNeutral News correleation:',
+              var_vals.corr(df.loc[:, 'Neutral'], method=stats.pointbiserialr)
         )
 
         print('\tPositive and negative defined as a news with a positive',
@@ -127,9 +144,11 @@ if __name__ == "__main__":
         # more than a negative news
         negative_news = np.array([1 if x is True else 0 for x in neg > 0.2])
         positive_news = np.array([1 if x is True else 0 for x in pos > 0.2])
+        neutral_news = np.array([1 if n < 0.2 and p < 0.2 is True else 0 for n, p in zip(neg, pos)])
 
         df['Negative'] = negative_news
         df['Positive'] = positive_news
+        df['Neutral'] = neutral_news
 
         # find correlation between sensationalism and positive and negative news
         print('\t\tPositive News correleation:',
@@ -140,35 +159,42 @@ if __name__ == "__main__":
               var_vals.corr(df.loc[:, 'Negative'], method=stats.pointbiserialr)
         )
 
+        print('\t\tNeutral News correleation:',
+              var_vals.corr(df.loc[:, 'Neutral'], method=stats.pointbiserialr)
+        )
+
         # Make a dataframe of only sensationalist news
         var_news = df[df[var] == 1]
         if np.isnan(var_news.loc[:, 'POS'].iloc[0]):
 
             pos_var = var_news.loc[:, 'POS.1']
             neg_var = var_news.loc[:, 'NEG.1']
+            neu_var = var_news.loc[:, 'NEU.1']
         else:
             pos_var = var_news.loc[:, 'POS']
             neg_var = var_news.loc[:, 'NEG']
-        pval = ttest_ind(pos_var, neg_var).pvalue
+            neu_var = var_news.loc[:, 'NEU']
+
+        # pval = ttest_ind(pos_var, neg_var).pvalue
 
         # Make a boxplot pos and neg scores
-        plt.boxplot([pos_var, neg_var])
-        plt.xticks([1, 2], ['Positive', 'Negative'])
-        plt.title('pvalue: ' + str(pval))
+        plt.boxplot([pos_var, neg_var, neu_var])
+        plt.xticks([1, 2, 3], ['Positive', 'Negative', 'Neutral'])
+        # plt.title(f'pvalue: POSvNEG {str(pval)}')
         plt.savefig(
             f'figures/{classif}/preprocess{use_preprocess}/{var}_pos_neg_scores.png'
         )
         plt.close()
 
         # plot frequency of positive and negative news
-        plt.hist([pos_var, neg_var], bins=100, label=['Positive', 'Negative'])
+        plt.hist([pos_var, neg_var, neu_var], bins=100, label=['Positive', 'Negative'])
         plt.legend()
         plt.savefig(
             f'figures/{classif}/preprocess{use_preprocess}/{var}_pos_neg_hist.png'
         )
         plt.close()
         # Create a kde plot with curves
-        sns.kdeplot([pos_var, neg_var], fill=True)
+        sns.kdeplot([pos_var, neg_var, neu_var], fill=True)
         plt.title('Frequency Plot with Curves')
         plt.xlabel('Values')
         plt.ylabel('Density')
