@@ -37,17 +37,17 @@ if __name__ == "__main__":
     pval = ttest_ind(pos, neg).pvalue
 
     # plot frequency of positive and negative news
-    plt.hist([pos, neg], bins=100, label=['Positive', 'Negative'])
+    plt.hist([pos, neg, neu], bins=20, label=['Positive', 'Negative', 'Neutral'])
     plt.title('pvalue: ' + str(pval))
     plt.legend()
-    plt.savefig(f'figures/{classif}/preprocess{use_preprocess}/pos_neg_hist.png')
+    plt.savefig(f'figures/{classif}/preprocess{use_preprocess}/pos_neg_neu_hist.png')
     plt.close()
     # Create a kde plot with curves
-    sns.kdeplot([pos, neg], fill=True)
+    sns.kdeplot([pos, neg, neu], fill=True)
     plt.title('Frequency Plot with Curves')
     plt.xlabel('Values')
     plt.ylabel('Density')
-    plt.savefig(f'figures/{classif}/preprocess{use_preprocess}/pos_neg_kde.png')
+    plt.savefig(f'figures/{classif}/preprocess{use_preprocess}/pos_neg_neu_kde.png')
     plt.close()
     print('\Total scores')
 
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         plt.close()
 
         # plot frequency of positive and negative news
-        plt.hist([pos_var, neg_var, neu_var], bins=100, label=['Positive', 'Negative'])
+        plt.hist([pos_var, neg_var, neu_var], bins=20, label=['Positive', 'Negative', 'Neutral'])
         plt.legend()
         plt.savefig(
             f'figures/{classif}/preprocess{use_preprocess}/{var}_pos_neg_hist.png'
