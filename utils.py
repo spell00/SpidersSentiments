@@ -1,4 +1,5 @@
 import datetime
+from typing import List
 
 def now():
     return datetime.datetime.now()
@@ -9,7 +10,7 @@ def now():
 # 9.28 minutes # Not actually added yet, oops.
 # 5.60 seconds
 # 790 milliseconds
-# *Except I prefer abbreviated formats, so I print d,h,m,s, or ms. 
+# *Except I prefer abbreviated formats, so I print d,h,m,s, or ms.
 def format_delta(start, end):
 
     # Time in microseconds
@@ -79,18 +80,18 @@ import re
 alphabets= "([A-Za-z])"
 prefixes = "(mr|st|mrs|ms|dr)[.]"
 suffixes = "(inc|ltd|jr|sr|co)"
-starters = "(mr|mrs|ms|dr|prof|capt|cpt|lt|he\s|she\s|it\s|they\s|their\s|our\s|we\s|but\s|however\s|that\s|this\s|wherever)"
+starters = r"(mr|mrs|ms|dr|prof|capt|cpt|lt|he\s|she\s|it\s|they\s|their\s|our\s|we\s|but\s|however\s|that\s|this\s|wherever)"
 acronyms = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
 websites = "[.](com|net|org|io|gov|edu|me)"
 digits = "([0-9])"
 multiple_dots = r'\.{2,}'
 
-def split_into_sentences(text: str) -> list[str]:
+def split_into_sentences(text: str) -> List[str]:
 
     """
     Split the text into sentences.
 
-    If the text contains substrings "<prd>" or "<stop>", they would lead 
+    If the text contains substrings "<prd>" or "<stop>", they would lead
     to incorrect splitting because they are used as markers for splitting.
 
     :param text: text to be split into sentences
@@ -106,7 +107,7 @@ def split_into_sentences(text: str) -> list[str]:
     text = re.sub(digits + "[.]" + digits,"\\1<prd>\\2",text)
     text = re.sub(multiple_dots, lambda match: "<prd>" * len(match.group(0)) + "<stop>", text)
     if "Ph.D" in text: text = text.replace("Ph.D.","Ph<prd>D<prd>")
-    text = re.sub("\s" + alphabets + "[.] "," \\1<prd> ",text)
+    text = re.sub(r"\s" + alphabets + r"[.] ", r" \\1<prd> ", text)
     text = re.sub(acronyms+" "+starters,"\\1<stop> \\2",text)
     text = re.sub(alphabets + "[.]" + alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>\\3<prd>",text)
     text = re.sub(alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>",text)

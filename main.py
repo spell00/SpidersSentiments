@@ -1,3 +1,37 @@
+from spider_guardian.langsmith.simple import push_reply_to_dataset
+# Utility to log a reply to LangSmith dataset
+def log_reply_to_langsmith_dataset(
+    tweet_text,
+    author,
+    url,
+    generated_reply,
+    likes=0,
+    replies=0,
+    impressions=0,
+    metadata=None
+):
+    """Log a reply (bot or human) to the LangSmith dataset."""
+    push_reply_to_dataset(
+        tweet_text=tweet_text,
+        author=author,
+        url=url,
+        generated_reply=generated_reply,
+        likes=likes,
+        replies=replies,
+        impressions=impressions,
+        metadata=metadata or {}
+    )
+# Example usage (call this after posting or collecting a reply)
+# log_reply_to_langsmith_dataset(
+#     tweet_text="Why do spiders bite?",
+#     author="user123",
+#     url="https://twitter.com/user123/status/789",
+#     generated_reply="Spiders bite mostly in self-defense, and most bites are harmless.",
+#     likes=3,
+#     replies=0,
+#     impressions=50,
+#     metadata={"source": "bot"}
+# )
 import pandas as pd
 import numpy as np
 import os
@@ -17,6 +51,9 @@ from flair.models import TextClassifier
 from flair.data import Sentence
 from sklearn.metrics import accuracy_score
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from datetime import datetime
+
+from spider_guardian.storage import SQLDataStore, SentimentResult
 
 from bs4 import BeautifulSoup as bs
 from selenium import webdriver
@@ -46,9 +83,17 @@ driver = webdriver.Firefox(options=options)
 # texte = soup.get_text()
 
 
-# Charger le CSV avec pandas
-def charger_csv(chemin_csv):
-    return pd.read_csv(chemin_csv, sep='\t')
+# Charger le dataset depuis SQL ou CSV
+def charger_dataset(chemin_csv: str, sql_db: str, delimiter: str = '\t') -> pd.DataFrame:
+    if sql_db:
+        store = SQLDataStore(sql_db)
+        try:
+            df = store.dataset_dataframe()
+            if not df.empty:
+                return df
+        finally:
+            store.close()
+    return pd.read_csv(chemin_csv, sep=delimiter)
 
 # Obtenir le texte de l'URL avec BeautifulSoup
 def obtenir_texte(url):
@@ -57,6 +102,14 @@ def obtenir_texte(url):
         reponse.raise_for_status()
         soup = BeautifulSoup(reponse.text, 'html.parser')
         texte = soup.get_text()
+        # Log the collected text as a human reply to LangSmith
+        push_reply_to_dataset(
+            tweet_text=texte[:200],  # Truncate for dataset
+            author="human_collector",
+            url=url,
+            generated_reply="",  # No generated reply, just collected
+            metadata={"source": "human", "function": "obtenir_texte"}
+        )
         return texte
     except requests.exceptions.RequestException as e:
         print(f"Erreur lors de la récupération de l'URL {url}: {e}")
@@ -69,6 +122,14 @@ def obtenir_texte_better_but_slow(url):
         page = driver.page_source
         soup = bs(page, 'lxml')
         texte = soup.get_text()
+        # Log the collected text as a human reply to LangSmith
+        push_reply_to_dataset(
+            tweet_text=texte[:200],
+            author="human_collector",
+            url=url,
+            generated_reply="",
+            metadata={"source": "human", "function": "obtenir_texte_better_but_slow"}
+        )
         return texte
     except (NoSuchElementException, WebDriverException) as e:
         print(f"Erreur lors de la récupération de l'URL {url}: {e}")
@@ -87,8 +148,15 @@ def obtenir_texte_better_but_slow(url):
 
 # Analyser les sentiments avec le modèle Hugging Face
 def analyser_sentiments(texte, sentiment_analyzer):
-    # resultat_sentiment.save_model("data/berteet_sentiment_analysis.model")
     resultat_sentiment = sentiment_analyzer(texte)
+    # Log sentiment analysis as a bot reply (example)
+    push_reply_to_dataset(
+        tweet_text=texte, # [:200]
+        author="bot",
+        url="",
+        generated_reply=str(resultat_sentiment[0]),
+        metadata={"source": "bot", "function": "analyser_sentiments"}
+    )
     return resultat_sentiment[0]
 
 def preprocess(texte, stopwords, ss, words_dict):
@@ -177,12 +245,21 @@ def get_eng_words(file='data/english_words_479k.txt'):
     return eng_words
 
 # Fonction principale
-def main(chemin_csv, classif, use_preprocess):
+def main(
+    chemin_csv,
+    classif,
+    use_preprocess,
+    sql_db,
+    delimiter='\t',
+    legacy_csv=None,
+):
 
     n_found = 0
     classifier = get_classifier(classif)
-    data_frame = charger_csv(chemin_csv)
+    data_frame = charger_dataset(chemin_csv, sql_db, delimiter)
     new_df = []
+    sentiment_results = []
+    store = SQLDataStore(sql_db) if sql_db else None
 
     # Ajouter une nouvelle colonne pour les résultats d'analyse des sentiments
     # data_frame['POS'] = ''
@@ -239,13 +316,38 @@ def main(chemin_csv, classif, use_preprocess):
 
         new_df.append(np.concatenate([ligne.values, rates]))
 
+        if store is not None:
+            payload = {k: (v.item() if isinstance(v, np.generic) else v) for k, v in ligne.to_dict().items()}
+            payload.update({'POS': pos_rate, 'NEG': neg_rate, 'NEU': neu_rate})
+            dataset_id = str(payload.get('ID', index))
+            sentiment_results.append(
+                SentimentResult(
+                    dataset_id=dataset_id,
+                    classifier=classif,
+                    preprocess=int(use_preprocess),
+                    pos=float(pos_rate),
+                    neg=float(neg_rate),
+                    neu=float(neu_rate),
+                    created_at=datetime.utcnow(),
+                    payload=payload,
+                )
+            )
+
     # Enregistrer le résultat dans un nouveau CSV
-    new_df = pd.DataFrame(np.stack(new_df))
-    new_df.columns = data_frame.columns.tolist() + ['POS', 'NEG', 'NEU']
-    os.makedirs(f'resultats/preprocess{use_preprocess}/', exist_ok=True)
-    new_df.to_csv(
-        f'resultats/preprocess{use_preprocess}/resultats_sentiments_{classif}.csv',
-          index=False)
+    if new_df:
+        new_df = pd.DataFrame(np.stack(new_df))
+        new_df.columns = data_frame.columns.tolist() + ['POS', 'NEG', 'NEU']
+        target_csv = legacy_csv or f'resultats/preprocess{use_preprocess}/resultats_sentiments_{classif}.csv'
+        os.makedirs(os.path.dirname(target_csv) or '.', exist_ok=True)
+        new_df.to_csv(target_csv, index=False)
+    else:
+        new_df = pd.DataFrame(columns=data_frame.columns.tolist() + ['POS', 'NEG', 'NEU'])
+
+    if store is not None:
+        if sentiment_results:
+            store.clear_sentiment_results(classifier=classif, preprocess=int(use_preprocess))
+            store.save_sentiment_results(sentiment_results)
+        store.close()
     print('DONE. Found:', n_found, 'English articles.')
 
 if __name__ == "__main__":
@@ -254,10 +356,16 @@ if __name__ == "__main__":
     parser.add_argument("--chemin_csv", type=str, default="data/Data_spider_news_global.csv")
     parser.add_argument("--classif", type=str, default='huggingface_roberta')
     parser.add_argument("--use_preprocess", type=int, default=0)
+    parser.add_argument("--sql_db", type=str, default="data/spider_guardian.sqlite")
+    parser.add_argument("--delimiter", type=str, default='\t')
+    parser.add_argument("--legacy_csv", type=str, default=None)
     args = parser.parse_args()
 
     main(
         args.chemin_csv,
         args.classif,
-        args.use_preprocess
+        args.use_preprocess,
+        args.sql_db,
+        args.delimiter,
+        args.legacy_csv,
     )

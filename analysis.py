@@ -1,10 +1,32 @@
 import os
+from typing import Optional
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import ttest_ind
 from scipy import stats
+
+from spider_guardian.storage import SQLDataStore
+
+
+def load_sentiment_dataframe(
+      classif: str,
+      use_preprocess: int,
+      sql_db: str,
+      legacy_csv: Optional[str] = None,
+) -> pd.DataFrame:
+      if sql_db:
+            store = SQLDataStore(sql_db)
+            try:
+                  df = store.sentiment_dataframe(classifier=classif, preprocess=use_preprocess)
+                  if not df.empty:
+                        return df
+            finally:
+                  store.close()
+      fallback_path = legacy_csv or f"resultats/preprocess{use_preprocess}/resultats_sentiments_{classif}.csv"
+      return pd.read_csv(fallback_path, sep=',')
 # Make one descriptive table of:
 # - the number of pos and neg news total (1 row)
 # - the number of pos and neg news per Sensationalism (2 rows)
@@ -19,21 +41,22 @@ from scipy import stats
 if __name__ == "__main__":
     # Load the CSV file
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--classif", type=str, default='huggingface_roberta')
     parser.add_argument("--use_preprocess", type=int, default=1)
+    parser.add_argument("--sql_db", type=str, default="data/spider_guardian.sqlite")
+    parser.add_argument("--legacy_csv", type=str, default=None)
     args = parser.parse_args()
     classif = args.classif
     use_preprocess = args.use_preprocess
 
-    df = pd.read_csv(
-        f"resultats/preprocess{use_preprocess}/resultats_sentiments_{classif}.csv", sep=','
-    )
+    df = load_sentiment_dataframe(classif, use_preprocess, args.sql_db, args.legacy_csv)
+    pos = df['POS']
+    neg = df['NEG']
+    neu = df['NEU']
     os.makedirs(f'figures/{classif}/preprocess{use_preprocess}', exist_ok=True)
     # find correlation between sensationalism and positive and negative rates
-    pos = df.iloc[:, -3]
-    neg = df.iloc[:, -2]
-    neu = df.iloc[:, -1]
     pval = ttest_ind(pos, neg).pvalue
 
     # plot frequency of positive and negative news
@@ -42,6 +65,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.savefig(f'figures/{classif}/preprocess{use_preprocess}/pos_neg_neu_hist.png')
     plt.close()
+
     # Create a kde plot with curves
     sns.kdeplot([pos, neg, neu], fill=True)
     plt.title('Frequency Plot with Curves')
@@ -193,11 +217,15 @@ if __name__ == "__main__":
             f'figures/{classif}/preprocess{use_preprocess}/{var}_pos_neg_hist.png'
         )
         plt.close()
+
+        # make a histogram
+
         # Create a kde plot with curves
         sns.kdeplot([pos_var, neg_var, neu_var], fill=True)
         plt.title('Frequency Plot with Curves')
         plt.xlabel('Values')
         plt.ylabel('Density')
+        plt.xlim(left=0)
         plt.savefig(
             f'figures/{classif}/preprocess{use_preprocess}/{var}_pos_neg_kde.png'
         )

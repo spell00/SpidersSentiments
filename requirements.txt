@@ -1,12 +1,31 @@
-spacy
-nltk
-emoji
-transformers
-pandas
-bs4
-unidecode
-flair
-vaderSentiment
-scikit-learn
-selenium
-beautifulsoup4
+spacy==3.6.1
+nltk==3.8.1
+emoji==2.2.0
+# Updated to compatible versions
+transformers>=4.35.0
+huggingface_hub>=0.16.4,<1.0.0
+sentence-transformers==2.2.2
+pandas==2.0.3
+beautifulsoup4==4.12.2
+unidecode==1.3.6
+flair==0.12.2
+vaderSentiment==3.3.2
+scikit-learn==1.3.2
+selenium==4.15.2
+datasets==2.12.0
+tweepy==4.14.0
+webdriver-manager==4.0.1
+# Pin AWS dependencies to avoid conflicts
+boto3==1.20.54
+botocore==1.23.54
+s3transfer==0.5.2
+jmespath==0.10.0
+bitsandbytes
+# Optional: for advanced quantization support
+optimum
+pyarrow
+tinydb==4.8.0
+# Optional LangChain integration (community/provider split)
+langchain-core>=0.2.0
+langchain-community>=0.2.0
+tinydb==4.8.0

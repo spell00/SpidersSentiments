@@ -1,0 +1,15 @@
+spacy
+nltk
+emoji
+pandas
+bs4
+unidecode
+vaderSentiment
+scikit-learn
+selenium
+beautifulsoup4
+datasets
+sentence-transformers
+tweepy
+webdriver-manager
+tinydb

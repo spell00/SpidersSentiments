@@ -18,6 +18,8 @@ from flair.data import Sentence
 from sklearn.metrics import accuracy_score
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
 
+from spider_guardian.storage import SQLDataStore
+
 from bs4 import BeautifulSoup as bs
 from selenium import webdriver
 import requests
@@ -38,9 +40,17 @@ options.add_argument("--headless")
 driver = webdriver.Firefox(options=options)
 
 
-# Charger le CSV avec pandas
-def charger_csv(chemin_csv):
-    return pd.read_csv(chemin_csv, sep='\t')
+# Charger le dataset depuis SQL ou CSV
+def charger_dataset(chemin_csv: str, sql_db: str, delimiter: str = '\t'):
+    if sql_db:
+        store = SQLDataStore(sql_db)
+        try:
+            df = store.dataset_dataframe()
+            if not df.empty:
+                return df
+        finally:
+            store.close()
+    return pd.read_csv(chemin_csv, sep=delimiter)
 
 # Obtenir le texte de l'URL avec BeautifulSoup
 def obtenir_texte(url):
@@ -118,7 +128,7 @@ def label_to_onehot(label):
 def main(args):
 
     n_found = 0
-    data_frame = charger_csv(args.chemin_csv)
+    data_frame = charger_dataset(args.chemin_csv, args.sql_db, args.delimiter)
     new_df = []
     articles = []
 
@@ -170,6 +180,8 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--chemin_csv", type=str, default="data/Data_spider_news_global.csv")
+    parser.add_argument("--sql_db", type=str, default="data/spider_guardian.sqlite")
+    parser.add_argument("--delimiter", type=str, default='\t')
     parser.add_argument("--use_preprocess", type=int, default=0)
     parser.add_argument("--column", type=str, default='Sensationalism')
     parser.add_argument("--test", type=int, default=0)

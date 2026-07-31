@@ -1,0 +1,20 @@
+# Install heavy ML packages via conda (faster)
+# Run: conda install -c conda-forge pytorch torchvision transformers spacy scikit-learn pandas numpy
+
+# Then install remaining packages via pip
+nltk==3.8.1
+emoji==2.2.0
+beautifulsoup4==4.12.2
+unidecode==1.3.6
+flair==0.13.1
+vaderSentiment==3.3.2
+selenium==4.15.2
+datasets==2.14.6
+sentence-transformers==2.2.2
+tweepy==4.14.0
+webdriver-manager==4.0.1
+# Pin AWS dependencies to avoid conflicts
+boto3==1.20.54
+botocore==1.23.54
+s3transfer==0.5.2
+jmespath==0.10.0
